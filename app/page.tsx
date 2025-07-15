@@ -152,7 +152,13 @@ function DraggableIcons() {
           }}
           onMouseUp={e => {
             if (!dragMoved) {
-              // Play sound on click only if not dragged
+              // Stop all other audios before playing this one
+              audioRefs.current.forEach((a, idx) => {
+                if (a && idx !== i) {
+                  a.pause();
+                  a.currentTime = 0;
+                }
+              });
               const audio = audioRefs.current[i];
               if (audio) {
                 audio.currentTime = 0;
@@ -175,6 +181,13 @@ function DraggableIcons() {
           }}
           onTouchEnd={e => {
             if (!dragMoved) {
+              // Stop all other audios before playing this one
+              audioRefs.current.forEach((a, idx) => {
+                if (a && idx !== i) {
+                  a.pause();
+                  a.currentTime = 0;
+                }
+              });
               const audio = audioRefs.current[i];
               if (audio) {
                 audio.currentTime = 0;

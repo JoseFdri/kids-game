@@ -14,15 +14,47 @@ const ICONS = [
   "turn-off-button.jpeg",
 ];
 
+// Map icon name to audio file name (by convention)
+const ICON_AUDIO_MAP: Record<string, string> = {
+  "arrows.jpeg": "arrows.mp3",
+  "camera.jpeg": "camera.mp3",
+  "dialog.jpeg": "dialog.mp3",
+  "heart.jpeg": "heart.mp3",
+  "music.jpeg": "music.mp3",
+  "smile.jpeg": "risa.mp3", // smile = risa (spanish for laugh)
+  "songs.jpeg": "song.mp3",  // closest match
+  "start.jpeg": "start.mp3",
+  "turn-off-button.jpeg": "turn-off-button.mp3",
+};
+
 const initialPositions = ICONS.map((_, i) => ({
-  x: 60 + (i % 3) * 120,
-  y: 60 + Math.floor(i / 3) * 120,
+  x: 60 + (i % 3) * 200,
+  y: 60 + Math.floor(i / 3) * 200,
 }));
 
 function DraggableIcons() {
+  // Prevent pull-to-refresh on mobile/tablet
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    function preventPullToRefresh(e: TouchEvent) {
+      if (e.touches.length !== 1) return;
+      // Only prevent if at top and dragging down
+      if (el!.scrollTop === 0 && e.touches[0].clientY > 0) {
+        e.preventDefault();
+      }
+    }
+    el.addEventListener("touchmove", preventPullToRefresh, { passive: false });
+    return () => {
+      el.removeEventListener("touchmove", preventPullToRefresh);
+    };
+  }, []);
+
   const [positions, setPositions] = useState(initialPositions);
   const [dragging, setDragging] = useState<{idx: number; offsetX: number; offsetY: number} | null>(null);
+  const [dragMoved, setDragMoved] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const audioRefs = useRef<(HTMLAudioElement | null)[]>([]);
 
   useEffect(() => {
     function handleMouseMove(e: MouseEvent) {
@@ -113,6 +145,20 @@ function DraggableIcons() {
               offsetX: e.clientX - rect.left,
               offsetY: e.clientY - rect.top,
             });
+            setDragMoved(false);
+          }}
+          onMouseMove={() => {
+            if (dragging) setDragMoved(true);
+          }}
+          onMouseUp={e => {
+            if (!dragMoved) {
+              // Play sound on click only if not dragged
+              const audio = audioRefs.current[i];
+              if (audio) {
+                audio.currentTime = 0;
+                audio.play();
+              }
+            }
           }}
           onTouchStart={e => {
             const touch = e.touches[0];
@@ -122,16 +168,33 @@ function DraggableIcons() {
               offsetX: touch.clientX - rect.left,
               offsetY: touch.clientY - rect.top,
             });
+            setDragMoved(false);
+          }}
+          onTouchMove={() => {
+            if (dragging) setDragMoved(true);
+          }}
+          onTouchEnd={e => {
+            if (!dragMoved) {
+              const audio = audioRefs.current[i];
+              if (audio) {
+                audio.currentTime = 0;
+                audio.play();
+              }
+            }
           }}
         >
           <Image
             src={`/icons/${icon}`}
             alt={icon.replace(/\.jpeg$/, "")}
-            width={64}
-            height={64}
+            width={128}
+            height={128}
             style={{ userSelect: "none", pointerEvents: "none" }}
             draggable={false}
             priority
+          />
+          <audio
+            src={`/audios/${ICON_AUDIO_MAP[icon]}`}
+            ref={el => { audioRefs.current[i] = el; }}
           />
         </div>
       ))}
